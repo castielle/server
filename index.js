@@ -23,28 +23,6 @@ const { pool, getConnection } = require('./database');
 const s = new Date().getSeconds();
 
 
-// Insert post 1
-// app.get('/addpost1', (req, res) => {
-//
-//
-//     // pool.query("SELECT `id`,`name` FROM client WHERE name = ?", ["new1"],(err, rows) => {
-//     //     console.log(rows);
-//     //     connection.release();
-//     //     }
-//     // );
-//
-//
-//     pool.query("SELECT `id`,`name` FROM client WHERE name = ?", ["new1"],(err, rows) => {
-//         // if(err) {
-//         //     callback(err);
-//         // } else {
-//         console.log(rows[0].id);
-//         res.send('Post 1 added...');
-//         // }
-//     });
-// });
-
-
 // add listener for new connection
 io.on('connect', (socket) => {
 
@@ -58,7 +36,7 @@ io.on('connect', (socket) => {
     // server listen from each client via its socket
     // join handler
     socket.on('join', ({name,room}, callback) => {
-        console.log(name,room);
+        console.log(name,' has logged in room ', room);
 
         // put in object to destructure
         const { error, user } = addUser({ id: socket.id, name, room });
@@ -85,18 +63,14 @@ io.on('connect', (socket) => {
 
     });
 
-    socket.on('newUser', ({name,room}, callback) => {
-        console.log(name,room);
+    socket.on('createUser', ({name,room}, callback) => {
 
-        // var client_id = '';
+        const user = getUser(socket.id);
 
-        // let client = getClientByName(name);
-        // console.log(client);
-
-        getEmployeeNames = function(name){
+        insertClient = function(name){
             return new Promise(function(resolve, reject){
                 pool.query(
-                    "SELECT `id`,`name` FROM client WHERE name = ?", [name],
+                    'INSERT INTO `client` (`name`) VALUES (?)', [name],
                     function(err, rows){
                         if(rows === undefined){
                             reject(new Error("Error rows is undefined"));
@@ -106,48 +80,70 @@ io.on('connect', (socket) => {
                     }
                 )}
             )}
-        var client_id = '';
 
-        getEmployeeNames('new1')
+        insertClient(name)
             .then(function(results){
-                client_id=results[0];
-
-                console.log(client_id.id);
+                // client_id=results[0];
+                // console.log(client_id.id);
             })
             .catch(function(err){
                 console.log("Promise rejection error: "+err);
             })
 
 
-        // try {
-        //     client_id = createUser({ name, room });
-        // }
-        // catch (error) {
-        //     console.error(error);
-        // }
-        //
-        // // console.log('client', client_id);
-        //
-        // try {
-        //     const { group_id } = createGroup({ name, room });
-        // }
-        // catch (error) {
-        //     console.error(error);
-        // }
-        //
-        // try {
-        //     const { userRoom } = createMember({ name, room });
-        // }
-        // catch (error) {
-        //     console.error(error);
-        // }
-
-        // back to client front end; don't pass error so first one did not run
         callback();
-        // const error = true;
-        // if(error) {
-        //     callback({error:'error'});
-        // }
+
+    });
+
+    socket.on('registerRoom', ({name,room}, callback) => {
+
+        insertGroup = function(room){
+            return new Promise(function(resolve, reject){
+                pool.query(
+                    'INSERT INTO `group` (`name`) VALUES (?)', [room],
+                    function(err, rows){
+                        if(rows === undefined){
+                            reject(new Error("Error rows is undefined"));
+                        }else{
+                            resolve(rows);
+                        }
+                    }
+                )}
+            )}
+
+        insertGroup(room)
+            .then(function(results){
+                // client_id=results[0];
+                // console.log(client_id.id);
+            })
+            .catch(function(err){
+                console.log("Promise rejection error: "+err);
+            })
+
+        addMembership = function(name, room){
+            return new Promise(function(resolve, reject){
+                pool.query(
+                    'INSERT INTO `group` (`name`) VALUES (?)', [room],
+                    function(err, rows){
+                        if(rows === undefined){
+                            reject(new Error("Error rows is undefined"));
+                        }else{
+                            resolve(rows);
+                        }
+                    }
+                )}
+            )}
+
+        addMembership(name, room)
+            .then(function(results){
+                // client_id=results[0];
+                // console.log(client_id.id);
+            })
+            .catch(function(err){
+                console.log("Promise rejection error: "+err);
+            })
+
+        callback();
 
     });
 
