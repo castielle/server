@@ -4,12 +4,14 @@ const http = require('http');
 const cors = require('cors');
 
 const { addUser, removeUser, getUser, getUsersInRoom } = require('./src/models/user');
-const { createGroup, insertGroup, getGroupId } = require('./src/models/group');
+const { createGroup, insertGroup, getGroupId, leaveGroup } = require('./src/models/group');
 const { createMember, insertMembership, getLastMessageId, updateLastMessage } = require('./src/models/member');
 const { createClient, getClientId, insertClient, getClientById } = require('./src/models/client');
 const { insertMessage, getMessage, getUnreadMessage } = require('./src/models/message');
 
 "use strict";
+const crypto = require("crypto");
+
 
 const PORT = process.env.PORT || 5000;
 
@@ -27,13 +29,17 @@ const s = new Date().getSeconds();
 
 // add listener for new connection
 io.on('connect', (socket) => {
-    var clientId;
-    var groupId;
+    // var clientId;
+    // var groupId;
+    const serverId = crypto.randomBytes(16).toString("base64");
 
     // server listen from each client via its socket
     // join handler
     socket.on('join', async ({name,room}, callback) => {
         console.log(name,' has logged in room ', room);
+
+        console.log('server id ' + serverId); // => f9b327e70bbcf42494ccb28b2d98e00e
+
         //
         // // socket.emit('news', { hello: 'world' });
         //
@@ -54,12 +60,12 @@ io.on('connect', (socket) => {
 
         try {
             let resultOfInsertClient = await insertClient(name);
-            console.log('sync' + resultOfInsertClient);
+            // console.log('sync' + resultOfInsertClient);
         } catch (e) {}
 
 
         let resultsOfGetClientId = await getClientId(name);
-        console.log('clientId' + JSON.stringify(resultsOfGetClientId, null,4));
+        // console.log('clientId' + JSON.stringify(resultsOfGetClientId, null,4));
         const clientId = resultsOfGetClientId[0].id;
 
 
@@ -70,7 +76,7 @@ io.on('connect', (socket) => {
 
         let resultsOfGetGroupId = await getGroupId(room);
         const groupId = resultsOfGetGroupId[0].id;
-        console.log('groupId ' + groupId);
+        // console.log('groupId ' + groupId);
 
 
         try {
@@ -79,17 +85,17 @@ io.on('connect', (socket) => {
 
 
         let resultsOfGetLastMessageId = await getLastMessageId(clientId,groupId);
-        console.log('last message' + JSON.stringify(resultsOfGetLastMessageId, null,4));
+        // console.log('last message' + JSON.stringify(resultsOfGetLastMessageId, null,4));
 
 
         var lastMessageId = resultsOfGetLastMessageId[0].last_msg_id;
-        console.log(lastMessageId);
+        // console.log(lastMessageId);
 
 
         lastMessageId = lastMessageId - 2;
 
         let resultsOfGetUnreadMessage = await getUnreadMessage(groupId, lastMessageId);
-        console.log('unread messages' + JSON.stringify(resultsOfGetUnreadMessage, null,4));
+        // console.log('unread messages' + JSON.stringify(resultsOfGetUnreadMessage, null,4));
 
 
         var clientOfMessage;
@@ -99,7 +105,7 @@ io.on('connect', (socket) => {
         for (const element of resultsOfGetUnreadMessage) {
 
             clientOfMessage = await getClientById(element.posted_by);
-            console.log(clientOfMessage[0].name);
+            // console.log(clientOfMessage[0].name);
             // socket.emit('message', { user:`${clientOfMessage[0].name}` , text: `${clientOfMessage[0].name} ${element.content}`});
             socket.emit('message', { user:`Missed message sent by user: ${clientOfMessage[0].name} at ${element.time}` , text: `${element.content}`});
 
@@ -113,12 +119,12 @@ io.on('connect', (socket) => {
 
 
         const resultsOfGetUsersInRoom = getUsersInRoom(user.room);
-        console.log('users in room' + JSON.stringify(resultsOfGetUsersInRoom, null,4));
+        // console.log('users in room' + JSON.stringify(resultsOfGetUsersInRoom, null,4));
 
         var usersInRoom = [];
 
         for (const element of resultsOfGetUsersInRoom) {
-            console.log(element.name);
+            // console.log(element.name);
             usersInRoom.push(element.name);
         }
 
@@ -139,17 +145,19 @@ io.on('connect', (socket) => {
         io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room)});
 
         let resultsOfInsertMessage = await insertMessage(message,clientId,groupId);
-        console.log('insert message' + JSON.stringify(resultsOfInsertMessage, null,4));
+        // console.log('insert message' + JSON.stringify(resultsOfInsertMessage, null,4));
         const lastMessageId = resultsOfInsertMessage.insertId;
-        console.log(lastMessageId);
+        // console.log(lastMessageId);
 
         let resultsOfGetLastMessage = await getMessage(lastMessageId);
-        console.log('last msg' + JSON.stringify(resultsOfGetLastMessage, null,4));
+        // console.log('last msg' + JSON.stringify(resultsOfGetLastMessage, null,4));
         const lastMessage = resultsOfGetLastMessage;
-        console.log(lastMessage);
+        // console.log(lastMessage);
 
         let resultsOfUpdateLastMessage = await updateLastMessage(lastMessage[0].posted_by, lastMessage[0].group_id, lastMessageId);
-        console.log('update last message' + JSON.stringify(resultsOfUpdateLastMessage, null,4));
+        // console.log('update last message' + JSON.stringify(resultsOfUpdateLastMessage, null,4));
+
+
 
         callback();
     });
@@ -171,6 +179,7 @@ io.on('connect', (socket) => {
 
         socket.emit('message', { user:`Users in Room: ${usersInRoom}`, text: ''});
 
+
         // back to client front end; don't pass error so first one did not run
         callback();
 
@@ -179,11 +188,22 @@ io.on('connect', (socket) => {
 
     socket.on('leaveGroup',  async (clientId, groupId, callback) => {
 
-        
+        let resultsOfLeaveGroup = await leaveGroup(clientId, groupId);
+        console.log('leaving group' + JSON.stringify(resultsOfLeaveGroup, null,4));
 
         callback();
 
     });
+
+
+    socket.on('serverId',  async (callback) => {
+
+        socket.emit('message', { user:`Server ID: ${serverId}`, text: ''});
+
+        callback();
+
+    });
+
 
     socket.on('disconnect', () => {
         console.log('user has left');
