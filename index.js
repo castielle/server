@@ -4,11 +4,12 @@ const http = require('http');
 const cors = require('cors');
 
 const { addUser, removeUser, getUser, getUsersInRoom } = require('./src/models/user');
-const { createGroup } = require('./src/models/group');
-const { createMember } = require('./src/models/member');
-const { createClient } = require('./src/models/client');
+const { createGroup, insertGroup, getGroupId } = require('./src/models/group');
+const { createMember, insertMembership } = require('./src/models/member');
+const { createClient, getClientId, insertClient } = require('./src/models/client');
+const { insertMessage } = require('./src/models/message');
 
-
+"use strict";
 
 const PORT = process.env.PORT || 5000;
 
@@ -26,20 +27,17 @@ const s = new Date().getSeconds();
 
 // add listener for new connection
 io.on('connect', (socket) => {
-
-    // socket.on('test', ({name,room}, callback) => {
-    //     console.log('test');
-    //     callback();
-    // });
-
-    // console.log('we have a new connection');
+    var clientId;
+    var groupId;
 
     // server listen from each client via its socket
     // join handler
-    socket.on('join', ({name,room}, callback) => {
+    socket.on('join', async ({name,room}, callback) => {
         console.log(name,' has logged in room ', room);
-
-        // put in object to destructure
+        //
+        // // socket.emit('news', { hello: 'world' });
+        //
+        // // put in object to destructure
         const { error, user } = addUser({ id: socket.id, name, room });
 
         if(error)
@@ -53,199 +51,46 @@ io.on('connect', (socket) => {
 
         socket.join(user.room);
 
-        io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room) });
-
-        // create new client
-        insertClient = function(name){
-            return new Promise(function(resolve, reject){
-                pool.query(
-                    'INSERT INTO `client` (`name`) VALUES (?)', [name],
-                    function(err, rows){
-                        if(rows === undefined){
-                            reject(new Error("Error rows is undefined"));
-                        }else{
-                            resolve(rows);
-                        }
-                    }
-                )}
-            )}
-
-        insertClient(name)
-            .then(function(results){
-                // client_id=results[0];
-                // console.log(client_id.id);
-            })
-            .catch(function(err){
-                console.log("Promise rejection error: "+err);
-            })
-
-        getClientId = function(name){
-            return new Promise(function(resolve, reject){
-                pool.query(
-                    'SELECT * FROM `client` WHERE `name` = ?', [name],
-                    function(err, rows){
-                        if(rows === undefined){
-                            reject(new Error("Error rows is undefined"));
-                        }else{
-                            resolve(rows);
-                        }
-                    }
-                )}
-            )}
-
-        var clientId = 0;
-
-        getClientId(name)
-            .then(function(results){
-                clientId=results[0].id;
-                console.log('clientId ' + clientId);
-                // console.log(typeof(groupId));
-            })
-            .catch(function(err){
-                console.log("Promise rejection error: "+err);
-            })
-
-        // create room
-        insertGroup = function(room){
-            return new Promise(function(resolve, reject){
-                pool.query(
-                    'INSERT INTO `group` (`name`) VALUES (?)', [room],
-                    function(err, rows){
-                        if(rows === undefined){
-                            reject(new Error('Cannot insert group'));
-                        }else{
-                            resolve(rows);
-                        }
-                    }
-                )}
-            )}
-
-        insertGroup(room)
-            .then(function(results){
-                // client_id=results[0];
-                // console.log(results.insertId);
-            })
-            .catch(function(err){
-                console.log("Promise rejection error: "+err);
-            })
+        try {
+            let resultOfInsertClient = await insertClient(name);
+            console.log('sync' + resultOfInsertClient);
+        } catch (e) {}
 
 
-        getGroupId = function(room){
-            return new Promise(function(resolve, reject){
-                pool.query(
-                    'SELECT * FROM `group` WHERE `name` = ?', [room],
-                    function(err, rows){
-                        if(rows === undefined){
-                            reject(new Error('Cannot get group id'));
-                        }else{
-                            resolve(rows);
-                        }
-                    }
-                )}
-            )}
+        let resultsOfGetClientId = await getClientId(name);
+        console.log('clientId' + JSON.stringify(resultsOfGetClientId, null,4));
+        const clientId = resultsOfGetClientId[0].id;
 
-        var groupId = 0;
 
-        getGroupId(room)
-            .then(function(results){
-               groupId=results[0].id;
-               console.log('groupId ' + groupId);
-               // console.log(typeof(groupId));
-            })
-            .catch(function(err){
-                console.log("Promise rejection error: "+err);
-            })
+        try {
+            let resultsOfInsertGroup = await insertGroup(room);
+        } catch (e) {}
 
-        // create membership
-        insertMembership = function(clientId, groupId){
-            return new Promise(function(resolve, reject){
-                pool.query(
-                    'INSERT INTO `member` (`client_id`,`group_id`,`last_msg_id`) VALUES (?,?,NULL)',
-                    [parseInt(clientId), parseInt(groupId)],
-                    // [73, 49],
-                    function(err, rows){
-                        if(rows === undefined){
-                            reject(new Error("Cannot insert membership"));
-                        }else{
-                            resolve(rows);
-                        }
-                    }
-                )}
-            )}
 
-        insertMembership(clientId, groupId)
-            .then(function(results){
-                // client_id=results[0];
-                console.log(results);
-                console.log('membership inserted');
-            })
-            .catch(function(err){
-                console.log("Promise rejection error: "+err);
-            })
+        let resultsOfGetGroupId = await getGroupId(room);
+        const groupId = resultsOfGetGroupId[0].id;
+        console.log('groupId ' + groupId);
+
+
+        try {
+            let resultsOfInsertMembership = await insertMembership(clientId, groupId);
+        } catch (e) {}
+
+
+        // io.to(user.room).emit('message', { user: 'Admin', text: `${user.name} has left.` });
+        socket.emit('clientId', { clientId: clientId, groupId: groupId });
+
 
         // back to client front end; don't pass error so first one did not run
         callback();
-        // const error = true;
-        // if(error) {
-        //     callback({error:'error'});
-        // }
 
     });
 
-    socket.on('createUser', ({name,room}, callback) => {
-
-        const user = getUser(socket.id);
-
-        insertClient = function(name){
-            return new Promise(function(resolve, reject){
-                pool.query(
-                    'INSERT INTO `client` (`name`) VALUES (?)', [name],
-                    function(err, rows){
-                        if(rows === undefined){
-                            reject(new Error("Error rows is undefined"));
-                        }else{
-                            resolve(rows);
-                        }
-                    }
-                )}
-            )}
-
-        insertClient(name)
-            .then(function(results){
-                // client_id=results[0];
-                // console.log(client_id.id);
-            })
-            .catch(function(err){
-                console.log("Promise rejection error: "+err);
-            })
-
-
-        callback();
-
-    });
-
-
-    socket.on('registerRoom', ({name,room}, callback) => {
-
-
-
-        insertGroup(room)
-            .then(function(results){
-                // client_id=results[0];
-                // console.log(client_id.id);
-            })
-            .catch(function(err){
-                console.log("Promise rejection error: "+err);
-            })
-
-        callback();
-
-    });
 
     socket.on('getMessages', ({name,room}, callback) => {
+        // const user = getUser(socket.id);
 
-        io.sockets.socket(id).emit('hello');
-
+        io.to(socket.id).emit('hello');
 
         callback();
 
@@ -259,6 +104,18 @@ io.on('connect', (socket) => {
         // send to everyone in room
         io.to(user.room).emit('message', { user: user.name, text: message });
         io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room)});
+
+        // create new client
+
+
+        insertMessage(message, clientId, groupId)
+            .then(function(results){
+                // client_id=results[0];
+                // console.log(client_id.id);
+            })
+            .catch(function(err){
+                console.log("Promise rejection error: "+err);
+            })
 
         callback();
     });
