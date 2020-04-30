@@ -5,9 +5,9 @@ const cors = require('cors');
 
 const { addUser, removeUser, getUser, getUsersInRoom } = require('./src/models/user');
 const { createGroup, insertGroup, getGroupId } = require('./src/models/group');
-const { createMember, insertMembership } = require('./src/models/member');
+const { createMember, insertMembership, getLastMessageId, updateLastMessage } = require('./src/models/member');
 const { createClient, getClientId, insertClient } = require('./src/models/client');
-const { insertMessage } = require('./src/models/message');
+const { insertMessage, getMessage } = require('./src/models/message');
 
 "use strict";
 
@@ -87,39 +87,39 @@ io.on('connect', (socket) => {
     });
 
 
-    socket.on('getMessages', ({name,room}, callback) => {
-        // const user = getUser(socket.id);
-
-        io.to(socket.id).emit('hello');
-
-        callback();
-
-    });
-
-
     // sendMessage handler: get message from user
-    socket.on('sendMessage', (message, callback) => {
+    socket.on('sendMessage',  async (message, clientId, groupId, callback) => {
         const user = getUser(socket.id);
 
         // send to everyone in room
         io.to(user.room).emit('message', { user: user.name, text: message });
         io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room)});
 
-        // create new client
+        let resultsOfInsertMessage = await insertMessage(message,clientId,groupId);
+        console.log('insert message' + JSON.stringify(resultsOfInsertMessage, null,4));
+        const lastMessageId = resultsOfInsertMessage.insertId;
+        console.log(lastMessageId);
 
+        let resultsOfGetLastMessage = await getMessage(lastMessageId);
+        console.log('last msg' + JSON.stringify(resultsOfGetLastMessage, null,4));
+        const lastMessage = resultsOfGetLastMessage;
+        console.log(lastMessage);
 
-        insertMessage(message, clientId, groupId)
-            .then(function(results){
-                // client_id=results[0];
-                // console.log(client_id.id);
-            })
-            .catch(function(err){
-                console.log("Promise rejection error: "+err);
-            })
+        let resultsOfUpdateLastMessage = await updateLastMessage(lastMessage[0].posted_by, lastMessage[0].group_id, lastMessageId);
+        console.log('update last message' + JSON.stringify(resultsOfUpdateLastMessage, null,4));
 
         callback();
     });
 
+
+    socket.on('getUnread',  async (clientId, groupId) => {
+        const user = getUser(socket.id);
+                
+        let resultsOfGetLastMessageId = await getLastMessageId(clientId,groupId);
+        console.log('last message' + JSON.stringify(resultsOfGetLastMessageId, null,4));
+
+        callback();
+    });
 
     socket.on('disconnect', () => {
         console.log('user has left');
@@ -130,6 +130,8 @@ io.on('connect', (socket) => {
             io.to(user.room).emit('message', { user: 'Admin', text: `${user.name} has left.` });
             io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room)});
         }
+
+
     });
 } )
 
