@@ -1,4 +1,4 @@
-const { pool, getConnection } = require('../../database');
+const { pool } = require('../../database');
 
 
 const insertMessage = function(message, clientId, groupId){
@@ -47,4 +47,4 @@ const getUnreadMessage = function(groupId, lastMessageId){
         )}
     )}
 
-module.exports = { insertMessage, getMessage};
+module.exports = { insertMessage, getMessage, getUnreadMessage};

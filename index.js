@@ -6,8 +6,8 @@ const cors = require('cors');
 const { addUser, removeUser, getUser, getUsersInRoom } = require('./src/models/user');
 const { createGroup, insertGroup, getGroupId } = require('./src/models/group');
 const { createMember, insertMembership, getLastMessageId, updateLastMessage } = require('./src/models/member');
-const { createClient, getClientId, insertClient } = require('./src/models/client');
-const { insertMessage, getMessage } = require('./src/models/message');
+const { createClient, getClientId, insertClient, getClientById } = require('./src/models/client');
+const { insertMessage, getMessage, getUnreadMessage } = require('./src/models/message');
 
 "use strict";
 
@@ -39,6 +39,7 @@ io.on('connect', (socket) => {
         //
         // // put in object to destructure
         const { error, user } = addUser({ id: socket.id, name, room });
+
 
         if(error)
             return callback(error);
@@ -77,9 +78,51 @@ io.on('connect', (socket) => {
         } catch (e) {}
 
 
+        let resultsOfGetLastMessageId = await getLastMessageId(clientId,groupId);
+        console.log('last message' + JSON.stringify(resultsOfGetLastMessageId, null,4));
+
+
+        var lastMessageId = resultsOfGetLastMessageId[0].last_msg_id;
+        console.log(lastMessageId);
+
+
+        lastMessageId = lastMessageId - 2;
+
+        let resultsOfGetUnreadMessage = await getUnreadMessage(groupId, lastMessageId);
+        console.log('unread messages' + JSON.stringify(resultsOfGetUnreadMessage, null,4));
+
+
+        var clientOfMessage;
+
+        socket.emit('message', { user:'admin', text: 'Missed Messages'});
+
+        for (const element of resultsOfGetUnreadMessage) {
+
+            clientOfMessage = await getClientById(element.posted_by);
+            console.log(clientOfMessage[0].name);
+            // socket.emit('message', { user:`${clientOfMessage[0].name}` , text: `${clientOfMessage[0].name} ${element.content}`});
+            socket.emit('message', { user:`Missed message sent by user: ${clientOfMessage[0].name} at ${element.time}` , text: `${element.content}`});
+
+            // console.log(element.posted_by);
+            // clientOfMessage = await getClientById(element.posted_by);
+            // console.log(clientOfMessage);
+        }
+
         // io.to(user.room).emit('message', { user: 'Admin', text: `${user.name} has left.` });
         socket.emit('clientId', { clientId: clientId, groupId: groupId });
 
+
+        const resultsOfGetUsersInRoom = getUsersInRoom(user.room);
+        console.log('users in room' + JSON.stringify(resultsOfGetUsersInRoom, null,4));
+
+        var usersInRoom = [];
+
+        for (const element of resultsOfGetUsersInRoom) {
+            console.log(element.name);
+            usersInRoom.push(element.name);
+        }
+
+        socket.emit('message', { user:`Users in Room: ${usersInRoom}`, text: ''});
 
         // back to client front end; don't pass error so first one did not run
         callback();
@@ -112,13 +155,34 @@ io.on('connect', (socket) => {
     });
 
 
-    socket.on('getUnread',  async (clientId, groupId) => {
+    socket.on('usersInRoom',  async (room, callback) => {
         const user = getUser(socket.id);
-                
-        let resultsOfGetLastMessageId = await getLastMessageId(clientId,groupId);
-        console.log('last message' + JSON.stringify(resultsOfGetLastMessageId, null,4));
+
+
+        const resultsOfGetUsersInRoom = getUsersInRoom(room);
+        console.log('users in room' + JSON.stringify(resultsOfGetUsersInRoom, null,4));
+
+        var usersInRoom = [];
+
+        for (const element of resultsOfGetUsersInRoom) {
+            console.log(element.name);
+            usersInRoom.push(element.name);
+        }
+
+        socket.emit('message', { user:`Users in Room: ${usersInRoom}`, text: ''});
+
+        // back to client front end; don't pass error so first one did not run
+        callback();
+
+    });
+
+
+    socket.on('leaveGroup',  async (clientId, groupId, callback) => {
+
+        
 
         callback();
+
     });
 
     socket.on('disconnect', () => {
