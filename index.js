@@ -4,7 +4,7 @@ const http = require('http');
 const cors = require('cors');
 
 const { addUser, removeUser, getUser, getUsersInRoom } = require('./src/models/user');
-const { createGroup, insertGroup, getGroupId, leaveGroup } = require('./src/models/group');
+const { createGroup, insertGroup, getGroupId, leaveGroup, getAllGroup } = require('./src/models/group');
 const { createMember, insertMembership, getLastMessageId, updateLastMessage } = require('./src/models/member');
 const { createClient, getClientId, insertClient, getClientById } = require('./src/models/client');
 const { insertMessage, getMessage, getUnreadMessage } = require('./src/models/message');
@@ -107,7 +107,7 @@ io.on('connect', (socket) => {
             clientOfMessage = await getClientById(element.posted_by);
             // console.log(clientOfMessage[0].name);
             // socket.emit('message', { user:`${clientOfMessage[0].name}` , text: `${clientOfMessage[0].name} ${element.content}`});
-            socket.emit('message', { user:`Missed message sent by user: ${clientOfMessage[0].name} at ${element.time}` , text: `${element.content}`});
+            socket.emit('message', { user:`Missed message sent by user ${clientOfMessage[0].name} at ${element.time}` , text: `${element.content}`});
 
             // console.log(element.posted_by);
             // clientOfMessage = await getClientById(element.posted_by);
@@ -129,6 +129,8 @@ io.on('connect', (socket) => {
         }
 
         socket.emit('message', { user:`Users in Room: ${usersInRoom}`, text: ''});
+
+        socket.emit('message', { user:`Server ID: ${serverId}`, text: ''});
 
         // back to client front end; don't pass error so first one did not run
         callback();
@@ -178,6 +180,29 @@ io.on('connect', (socket) => {
         }
 
         socket.emit('message', { user:`Users in Room: ${usersInRoom}`, text: ''});
+
+
+        // back to client front end; don't pass error so first one did not run
+        callback();
+
+    });
+
+
+    socket.on('whatGroups',  async (callback) => {
+        const user = getUser(socket.id);
+
+
+        const resultsOfGetAllGroup = getAllGroup();
+        console.log('users in room' + JSON.stringify(resultsOfGetAllGroup, null,4));
+
+        var allGroups = [];
+
+        for (const element of resultsOfGetAllGroup) {
+            console.log(element.name);
+            allGroups.push(element.name);
+        }
+
+        socket.emit('message', { user:`Users in Room: ${allGroups}`, text: ''});
 
 
         // back to client front end; don't pass error so first one did not run
