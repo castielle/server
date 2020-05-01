@@ -13,7 +13,8 @@ const pool = mysql.createPool({
     host     : 'rds.custipjdjfst.ap-southeast-1.rds.amazonaws.com',
     user     : 'admin',
     password : 'Ig7FNxW8pzpSKNXiNla5',
-    database : 'rds'
+    database : 'rds',
+    port: 3306
 });
 
 // Connect
