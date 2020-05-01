@@ -91,7 +91,7 @@ io.on('connect', (socket) => {
         var lastMessageId = resultsOfGetLastMessageId[0].last_msg_id;
         // console.log(lastMessageId);
 
-        lastMessageId = lastMessageId - 2;
+        // lastMessageId = lastMessageId - 2;
 
         let resultsOfGetUnreadMessage = await getUnreadMessage(groupId, lastMessageId);
         // console.log('unread messages' + JSON.stringify(resultsOfGetUnreadMessage, null,4));
@@ -99,7 +99,7 @@ io.on('connect', (socket) => {
 
         var clientOfMessage;
 
-        socket.emit('message', { user:'admin', text: 'Missed Messages'});
+        // socket.emit('message', { user:'admin', text: 'Missed Messages'});
 
         for (const element of resultsOfGetUnreadMessage) {
 
@@ -129,7 +129,7 @@ io.on('connect', (socket) => {
 
         socket.emit('message', { user:`Users in Room: ${usersInRoom}`, text: ''});
 
-        socket.emit('message', { user:`Server ID: ${serverId}`, text: ''});
+        // socket.emit('message', { user:`Server ID: ${serverId}`, text: ''});
 
         // back to client front end; don't pass error so first one did not run
         callback();
