@@ -91,7 +91,6 @@ io.on('connect', (socket) => {
         var lastMessageId = resultsOfGetLastMessageId[0].last_msg_id;
         // console.log(lastMessageId);
 
-
         lastMessageId = lastMessageId - 2;
 
         let resultsOfGetUnreadMessage = await getUnreadMessage(groupId, lastMessageId);
