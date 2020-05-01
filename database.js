@@ -8,13 +8,15 @@ const mysql = require('mysql');
 //     database : 'chat'
 // });
 
-// amazon
+// amazon - internal
 const pool = mysql.createPool({
     host     : process.env.RDS_HOSTNAME,
     user     : process.env.RDS_USERNAME,
     password : process.env.RDS_PASSWORD,
-    port     : process.env.RDS_PORT
+    port     : process.env.RDS_PORT,
+    database : 'chat'
 });
+
 
 // Connect
 var getConnection = function(callback) {
