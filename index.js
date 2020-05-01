@@ -4,8 +4,8 @@ const http = require('http');
 const cors = require('cors');
 
 const { addUser, removeUser, getUser, getUsersInRoom } = require('./src/models/user');
-const { createGroup, insertGroup, getGroupId, leaveGroup, getAllGroup } = require('./src/models/group');
-const { createMember, insertMembership, getLastMessageId, updateLastMessage } = require('./src/models/member');
+const { createGroup, insertGroup, getGroupId, leaveGroup, getAllGroup,getGroupById } = require('./src/models/group');
+const { createMember, insertMembership, getLastMessageId, updateLastMessage, getMembership, getMyGroupIds } = require('./src/models/member');
 const { createClient, getClientId, insertClient, getClientById } = require('./src/models/client');
 const { insertMessage, getMessage, getUnreadMessage } = require('./src/models/message');
 
@@ -125,13 +125,18 @@ io.on('connect', (socket) => {
         for (const element of resultsOfGetUsersInRoom) {
             // console.log(element.name);
             usersInRoom.push(element.name);
+
         }
 
         socket.emit('message', { user:`Users in Room: ${usersInRoom}`, text: ''});
 
+
+
         // socket.emit('message', { user:`Server ID: ${serverId}`, text: ''});
 
         // back to client front end; don't pass error so first one did not run
+
+
         callback();
 
     });
@@ -168,7 +173,7 @@ io.on('connect', (socket) => {
         const user = getUser(socket.id);
 
 
-        const resultsOfGetUsersInRoom = getUsersInRoom(room);
+        let resultsOfGetUsersInRoom = getUsersInRoom(room);
         console.log('users in room' + JSON.stringify(resultsOfGetUsersInRoom, null,4));
 
         var usersInRoom = [];
@@ -187,21 +192,21 @@ io.on('connect', (socket) => {
     });
 
 
-    socket.on('whatGroups',  async (callback) => {
+    socket.on('myGroups',   async (clientId, callback) => {
         const user = getUser(socket.id);
 
 
-        const resultsOfGetAllGroup = getAllGroup();
-        console.log('users in room' + JSON.stringify(resultsOfGetAllGroup, null,4));
+        let resultsOfGetMembership = await getMembership(clientId);
+        console.log('my groups' + JSON.stringify(resultsOfGetMembership, null,4));
 
-        var allGroups = [];
+        var myGroups = [];
 
-        for (const element of resultsOfGetAllGroup) {
+        for (const element of resultsOfGetMembership) {
             console.log(element.name);
-            allGroups.push(element.name);
+            myGroups.push(element.name);
         }
 
-        socket.emit('message', { user:`Users in Room: ${allGroups}`, text: ''});
+        socket.emit('message', { user:`Your Groups: ${myGroups}`, text: ''});
 
 
         // back to client front end; don't pass error so first one did not run
@@ -210,10 +215,61 @@ io.on('connect', (socket) => {
     });
 
 
+    socket.on('myGroupIds',   async (clientId, callback) => {
+        const user = getUser(socket.id);
+        console.log('client id ' + clientId);
+
+        let resultsOfGetMyGroupIds = getMyGroupIds(clientId);
+        // console.log('my groups' + JSON.stringify(resultsOfGetMyGroupIds, null,4));
+        console.log('my groups' + resultsOfGetMyGroupIds);
+
+        var myGroups = [];
+
+        // for (const element of resultsOfGetMembership) {
+        //     console.log(element.name);
+        //     myGroups.push(element.name);
+        // }
+
+        // socket.emit('message', { user:`Your Groups: ${myGroups}`, text: ''});
+
+
+        // back to client front end; don't pass error so first one did not run
+        callback();
+
+    });
+
+
+    socket.on('myId',   async (clientId, callback) => {
+        const user = getUser(socket.id);
+
+
+        // const resultsOfGetMembership = getMembership(clientId);
+        // console.log('my groups' + JSON.stringify(resultsOfGetMembership, null,4));
+
+        // var myGroups = [];
+
+        // for (const element of resultsOfGetMembership) {
+        //     console.log(element.name);
+        //     myGroups.push(element.name);
+        // }
+
+        socket.emit('message', { user:`Your ID: ${clientId}`, text: ''});
+
+
+        // back to client front end; don't pass error so first one did not run
+        callback();
+
+    });
+
     socket.on('leaveGroup',  async (clientId, groupId, callback) => {
 
         let resultsOfLeaveGroup = await leaveGroup(clientId, groupId);
         console.log('leaving group' + JSON.stringify(resultsOfLeaveGroup, null,4));
+
+        let resultsOfGetGroupById = await getGroupById(groupId);
+        console.log('group by id' + JSON.stringify(resultsOfGetGroupById, null,4));
+
+        socket.emit('message', { user:`Leaving Group ${resultsOfGetGroupById[0].name}`, text: ''});
 
         callback();
 

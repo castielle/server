@@ -18,6 +18,40 @@ const createMember = ({ name, room }) => {
 }
 
 
+const getMyGroupIds = function(clientId){
+    return new Promise(function(resolve, reject){
+        pool.query(
+            'SELECT `group_id` FROM `member` WHERE `client_id` = ?',
+            [clientId],
+            function(err, rows){
+                console.log(err);
+                if(rows === undefined){
+                    console.log(err);
+                    reject(new Error("Cannot get membership"));
+                }else{
+                    resolve(rows);
+                }
+            }
+        )}
+    )}
+
+
+const getMembership = function(clientId){
+    return new Promise(function(resolve, reject){
+        pool.query(
+            'SELECT `group`.`id`, `group`.`name` FROM `member` INNER JOIN `group` ON `group`.`id` = `member`.`group_id` WHERE `member`.`client_id` = ?',
+            [clientId],
+            function(err, rows){
+                if(rows === undefined){
+                    console.log(err);
+                    reject(new Error("Cannot insert membership"));
+                }else{
+                    resolve(rows);
+                }
+            }
+        )}
+    )}
+
 const insertMembership = function(clientId, groupId){
     return new Promise(function(resolve, reject){
         pool.query(
@@ -68,4 +102,4 @@ const getLastMessageId = function(clientId, groupId){
     )}
 
 
-module.exports = { createMember, insertMembership, getLastMessageId, updateLastMessage };
+module.exports = { createMember, insertMembership, getLastMessageId, updateLastMessage, getMembership, getMyGroupIds };

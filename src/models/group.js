@@ -61,6 +61,21 @@ const leaveGroup = function(clientId, groupId){
     )}
 
 
+const getGroupById = function(groupId){
+    return new Promise(function(resolve, reject){
+        pool.query(
+            'SELECT * FROM `group` WHERE `id` = ?',
+            [groupId],
+            function(err, rows){
+                if(rows === undefined){
+                    reject(new Error('Cannot get group id'));
+                }else{
+                    resolve(rows);
+                }
+            }
+        )}
+    )}
+
 
 const getAllGroup = function(clientId, groupId){
     return new Promise(function(resolve, reject){
@@ -77,4 +92,4 @@ const getAllGroup = function(clientId, groupId){
         )}
     )}
 
-module.exports = { createGroup, insertGroup, getGroupId, leaveGroup, getAllGroup };
+module.exports = { createGroup, insertGroup, getGroupId, leaveGroup, getAllGroup,getGroupById };
